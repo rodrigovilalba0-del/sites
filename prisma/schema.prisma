@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SELLER
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(SELLER)
+  commission   Decimal?      @db.Decimal(5,2)
+  createdAt    DateTime      @default(now())
+  consignments Consignment[]
+  settlements  Settlement[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  costPrice   Decimal  @db.Decimal(10,2)
+  salePrice   Decimal  @db.Decimal(10,2)
+  stock       Int
+  createdAt   DateTime @default(now())
+  items       ConsignmentItem[]
+}
+
+model Consignment {
+  id          String            @id @default(cuid())
+  sellerId    String
+  createdAt   DateTime          @default(now())
+  seller      User              @relation(fields: [sellerId], references: [id])
+  items       ConsignmentItem[]
+  settlement  Settlement?
+}
+
+model ConsignmentItem {
+  id            String      @id @default(cuid())
+  consignmentId String
+  productId     String
+  quantitySent  Int
+  quantitySold  Int         @default(0)
+  quantityReturn Int        @default(0)
+  consignment   Consignment @relation(fields: [consignmentId], references: [id])
+  product       Product     @relation(fields: [productId], references: [id])
+}
+
+model Settlement {
+  id             String   @id @default(cuid())
+  consignmentId  String   @unique
+  sellerId       String
+  settledAt      DateTime @default(now())
+  totalSold      Decimal  @db.Decimal(10,2)
+  commissionAmt  Decimal  @db.Decimal(10,2)
+  adminReceivable Decimal @db.Decimal(10,2)
+  consignment    Consignment @relation(fields: [consignmentId], references: [id])
+  seller         User        @relation(fields: [sellerId], references: [id])
+}
